@@ -1,0 +1,5 @@
+{
+  "version": "1.0.1",
+  "changelog": "- Added System Tray support\n- Added Check Update feature\n- Fixed repository sync bugs",
+  "downloadUrl": "https://github.com/xenonama/vasler/releases/latest"
+}
