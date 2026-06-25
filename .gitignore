@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+release/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+
+# User data (مهم: اطلاعات شخصی کاربر)
+settings.json
+repositories.json
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+temp/
+*.zip
+*.7z
