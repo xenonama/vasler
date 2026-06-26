@@ -1,0 +1,14 @@
+{
+  "outputDir": "C:\\Users\\pc\\Desktop",
+  "ports": [],
+  "pingTimes": 1,
+  "timeout": 10,
+  "verifyLiveness": false,
+  "csvOutput": false,
+  "fullJson": false,
+  "txtOutput": true,
+  "speedTest": false,
+  "protocols": ["http", "https", "socks4", "socks5", "mtproto", "v2ray"],
+  "theme": "dark",
+  "killSwitch": false
+}

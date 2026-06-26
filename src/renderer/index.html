@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vasler - Proxy Collector</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Custom Title Bar -->
+        <header id="titleBar">
+            <div class="title-bar-left">
+                <span class="app-icon">🚀</span>
+                <span class="app-title">Vasler</span>
+                <span class="app-version">v1.0.0</span>
+            </div>
+            <div class="title-bar-right">
+                <button id="minimizeBtn" class="title-btn">─</button>
+                <button id="maximizeBtn" class="title-btn">☐</button>
+                <button id="closeBtn" class="title-btn close-btn">✕</button>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <nav class="sidebar">
+                <div class="sidebar-item active" data-tab="collector">
+                    <span class="sidebar-icon">📥</span>
+                    <span>Collector</span>
+                </div>
+                <div class="sidebar-item" data-tab="results">
+                    <span class="sidebar-icon">📋</span>
+                    <span>Results</span>
+                </div>
+                <div class="sidebar-item" data-tab="pinger">
+                    <span class="sidebar-icon">📡</span>
+                    <span>Pinger</span>
+                </div>
+                <div class="sidebar-item" data-tab="output">
+                    <span class="sidebar-icon">📁</span>
+                    <span>Output</span>
+                </div>
+                <div class="sidebar-item" data-tab="repositories">
+                    <span class="sidebar-icon">📂</span>
+                    <span>Repositories</span>
+                </div>
+                <div class="sidebar-item" data-tab="settings">
+                    <span class="sidebar-icon">⚙️</span>
+                    <span>Settings</span>
+                </div>
+            </nav>
+
+            <div class="content-area">
+
+                <!-- ============================================================
+                     TAB 1: COLLECTOR
+                     ============================================================ -->
+                <div class="tab-content active" id="tab-collector">
+                    <h2>Proxy Collector</h2>
+                    <div class="collector-settings">
+                        <div class="setting-row">
+                            <label>🔌 Protocols</label>
+                            <div class="protocol-group" id="protocolsContainer">
+                                <label><input type="checkbox" value="http" checked> HTTP</label>
+                                <label><input type="checkbox" value="https"> HTTPS</label>
+                                <label><input type="checkbox" value="socks4"> SOCKS4</label>
+                                <label><input type="checkbox" value="socks5" checked> SOCKS5</label>
+                                <label><input type="checkbox" value="mtproto"> MTProto</label>
+                                <label><input type="checkbox" value="v2ray"> V2Ray</label>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>🔢 Ports</label>
+                            <input type="text" id="ports" placeholder="Leave empty for all ports">
+                        </div>
+                        <div class="setting-row">
+                            <label>🏓 Ping Times</label>
+                            <input type="number" id="pingTimes" value="1" min="1" max="5">
+                            <label style="min-width:auto; margin-left:20px;">⏱️ Timeout (s)</label>
+                            <input type="number" id="timeout" value="10" min="5" max="30">
+                        </div>
+                        <div class="action-row">
+                            <button id="startBtn" class="btn-start">▶ Start Collection</button>
+                            <button id="stopBtn" class="btn-stop" disabled>⏹ Stop</button>
+                            <button id="refreshBtn">🔄 Refresh Repos</button>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+                        <span id="progressText">0%</span>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     TAB 2: RESULTS
+                     ============================================================ -->
+                <div class="tab-content" id="tab-results">
+                    <h2>📋 Collection Results</h2>
+                    <div class="results-summary" id="resultsSummary">
+                        <span>🔄 Run collection to see results...</span>
+                    </div>
+                    <div class="results-scroll-container">
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">⚡ VLess Configs</span>
+                                <span class="result-count" id="vlessCount">0</span>
+                                <button class="copy-btn" data-target="vlessList">📄 Copy</button>
+                            </div>
+                            <textarea id="vlessList" class="result-textarea" readonly placeholder="No VLess configs found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">🔮 VMess Configs</span>
+                                <span class="result-count" id="vmessCount">0</span>
+                                <button class="copy-btn" data-target="vmessList">📄 Copy</button>
+                            </div>
+                            <textarea id="vmessList" class="result-textarea" readonly placeholder="No VMess configs found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">🛡️ Trojan Configs</span>
+                                <span class="result-count" id="trojanCount">0</span>
+                                <button class="copy-btn" data-target="trojanList">📄 Copy</button>
+                            </div>
+                            <textarea id="trojanList" class="result-textarea" readonly placeholder="No Trojan configs found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">🌊 Shadowsocks Configs</span>
+                                <span class="result-count" id="ssCount">0</span>
+                                <button class="copy-btn" data-target="ssList">📄 Copy</button>
+                            </div>
+                            <textarea id="ssList" class="result-textarea" readonly placeholder="No Shadowsocks configs found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">📦 Other Configs</span>
+                                <span class="result-count" id="otherConfigsCount">0</span>
+                                <button class="copy-btn" data-target="otherConfigsList">📄 Copy</button>
+                            </div>
+                            <textarea id="otherConfigsList" class="result-textarea" readonly placeholder="No other configs found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">🌐 HTTP Proxies</span>
+                                <span class="result-count" id="httpCount">0</span>
+                                <button class="copy-btn" data-target="httpList">📄 Copy</button>
+                            </div>
+                            <textarea id="httpList" class="result-textarea" readonly placeholder="No HTTP proxies found..."></textarea>
+                        </div>
+                        <div class="result-section">
+                            <div class="result-section-header">
+                                <span class="result-section-title">✈️ MTProto Proxies</span>
+                                <span class="result-count" id="mtprotoCount">0</span>
+                                <button class="copy-btn" data-target="mtprotoList">📄 Copy</button>
+                            </div>
+                            <textarea id="mtprotoList" class="result-textarea" readonly placeholder="No MTProto proxies found..."></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="refreshResultsBtn">🔄 Refresh Results</button>
+                        <button id="openResultsFolderBtn">📂 Open Folder</button>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     TAB 3: PINGER
+                     ============================================================ -->
+                <div class="tab-content" id="tab-pinger">
+                    <h2>📡 Config Pinger</h2>
+                    <div class="pinger-controls">
+                        <button id="pingAllBtn" class="btn-start">▶ Ping All Configs</button>
+                        <button id="clearDeadBtn">🗑️ Clear Dead</button>
+                        <span id="pingerStatus" style="color:#8b949e; font-size:13px;">Ready</span>
+                    </div>
+                    <div class="pinger-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Configs</div>
+                            <div class="stat-value" id="pingerTotal">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">✅ Alive</div>
+                            <div class="stat-value" style="color:#3fb950;" id="pingerAlive">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">❌ Dead</div>
+                            <div class="stat-value" style="color:#f85149;" id="pingerDead">0</div>
+                        </div>
+                    </div>
+                    <div class="pinger-section">
+                        <div class="pinger-section-header">
+                            <span class="pinger-section-title">✅ Alive Configs</span>
+                            <span class="pinger-count" id="aliveCount">0</span>
+                            <button class="copy-btn" data-target="aliveList">📄 Copy All</button>
+                        </div>
+                        <div id="aliveList" class="config-grid">
+                            <div class="config-item empty">No alive configs. Run ping first.</div>
+                        </div>
+                    </div>
+                    <div class="pinger-section dead-section">
+                        <div class="pinger-section-header">
+                            <span class="pinger-section-title">🗑️ Dead Configs</span>
+                            <span class="pinger-count" id="deadCount">0</span>
+                            <button id="retryDeadBtn" class="retry-btn">🔄 Retry All</button>
+                        </div>
+                        <div id="deadList" class="config-grid dead-grid">
+                            <div class="config-item empty">No dead configs.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     TAB 4: OUTPUT
+                     ============================================================ -->
+                <div class="tab-content" id="tab-output">
+                    <h2>Output Settings</h2>
+                    <div class="output-settings">
+                        <div class="setting-row">
+                            <label>📁 Output Directory</label>
+                            <div class="input-group">
+                                <input type="text" id="outputDir" value="./proxy_output">
+                                <button id="browseBtn">Browse</button>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>📄 Output Formats</label>
+                            <div class="option-group">
+                                <label><input type="checkbox" id="txtOutput" checked> TXT</label>
+                                <label><input type="checkbox" id="csv"> CSV</label>
+                                <label><input type="checkbox" id="fullJson"> Full JSON</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     TAB 5: REPOSITORIES
+                     ============================================================ -->
+                <div class="tab-content" id="tab-repositories">
+                    <h2>Repository Manager</h2>
+                    <div class="repo-add-form">
+                        <div class="setting-row" style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <input type="text" id="repoNameInput" placeholder="Repository name..." style="flex:1; min-width:150px;">
+                            <button id="addRepoBtn" class="btn-start" style="white-space:nowrap;">➕ Add</button>
+                        </div>
+                        <div class="setting-row" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                            <label style="min-width:auto; font-size:13px; color:#8b949e;">📋 Repository Types (select all that apply)</label>
+                            <div class="repo-type-group">
+                                <label><input type="checkbox" class="repo-type-checkbox" value="v2ray"> V2Ray Configs</label>
+                                <label><input type="checkbox" class="repo-type-checkbox" value="proxy_list"> Proxy List</label>
+                                <label><input type="checkbox" class="repo-type-checkbox" value="mtproto"> MTProto</label>
+                                <label><input type="checkbox" class="repo-type-checkbox" value="gfwlist"> GFW List</label>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <textarea id="repoUrlsInput" rows="3" placeholder="Enter one URL per line..."></textarea>
+                        </div>
+                    </div>
+                    <div class="repo-list-container">
+                        <div class="repo-list-header">
+                            <h3>📂 Existing Repositories</h3>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button id="deleteRepoBtn">🗑️ Delete Selected</button>
+                                <button id="updateRepoBtn">🔄 Update All</button>
+                                <button id="syncRepoBtn" class="btn-start" style="background:#1f6feb;">🔄 Sync from GitHub</button>
+                            </div>
+                        </div>
+                        <div id="repoList" class="repo-list"><div class="repo-item" style="color:#8b949e;padding:12px;">Loading repositories...</div></div>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     TAB 6: SETTINGS
+                     ============================================================ -->
+                <div class="tab-content" id="tab-settings">
+                    <h2>Settings</h2>
+                    <div class="settings-group">
+                        <div class="setting-row">
+                            <label>🌙 Theme</label>
+                            <select id="themeSelect">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>✅ Verify Liveness</label>
+                            <input type="checkbox" id="verify" checked>
+                            <span class="hint">Check proxies before saving</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>🚀 Speed Test</label>
+                            <input type="checkbox" id="speedTest" checked>
+                            <span class="hint">Show fastest proxies after collection</span>
+                        </div>
+
+                        <!-- Xray -->
+                        <div class="setting-row">
+                            <label>🛠️ Xray Core</label>
+                            <button id="downloadXrayBtn">⬇ Download Xray</button>
+                            <button id="selectXrayBtn">📂 Select Xray</button>
+                            <span id="xrayStatus" style="color:#8b949e;">Not installed</span>
+                        </div>
+                        <div class="setting-row" id="xrayProgressRow" style="display:none;">
+                            <label style="min-width:80px;">Progress</label>
+                            <div class="progress-bar" style="flex:1; height:6px; background:#21262d; border-radius:4px; overflow:hidden;">
+                                <div id="xrayProgressFill" class="progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #238636, #2ea043);"></div>
+                            </div>
+                            <span id="xrayProgressText" style="font-size:12px; color:#8b949e; min-width:40px;">0%</span>
+                        </div>
+
+                        <!-- System Tray -->
+                        <div class="setting-row">
+                            <label>🖥️ System Tray</label>
+                            <input type="checkbox" id="trayToggle" checked>
+                            <span class="hint">Show icon in system tray</span>
+                        </div>
+
+                        <!-- Version & Update -->
+                        <div class="setting-row">
+                            <label>📌 App Version</label>
+                            <span id="versionDisplay" style="color:#58a6ff;">v1.0.0</span>
+                            <button id="checkUpdateBtn" style="background:#1f6feb;">⬆ Check Update</button>
+                        </div>
+                        <div class="setting-row" id="updateInfoRow" style="display:none;">
+                            <label style="min-width:80px;">Update</label>
+                            <span id="updateInfo" style="color:#8b949e;"></span>
+                        </div>
+
+                        <div class="setting-row">
+                            <label>💾 Auto-save settings</label>
+                            <span class="hint" style="color:#3fb950;">✓ Enabled (saves automatically)</span>
+                        </div>
+                        <div class="setting-row">
+                            <button id="resetBtn" class="btn-stop">Reset to Defaults</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- content-area -->
+
+            <!-- Log Panel -->
+            <div class="log-panel" id="logPanel">
+                <div class="log-header">
+                    <span>📋 Log</span>
+                    <div style="display:flex; gap:6px;">
+                        <button id="copyLogBtn" title="Copy Log">📄 Copy</button>
+                        <button id="clearLogBtn">🗑️ Clear</button>
+                        <button id="toggleLogBtn">▲</button>
+                    </div>
+                </div>
+                <pre id="logContent"></pre>
+            </div>
+
+        </div> <!-- main-layout -->
+    </div> <!-- app -->
+    <script src="./app.js"></script>
+</body>
+</html>
