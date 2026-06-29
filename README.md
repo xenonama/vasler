@@ -6,7 +6,6 @@
 
 **Vasler** is a powerful desktop application for collecting and managing proxies and V2Ray configs from GitHub repositories.
 
-![Vasler Screenshot](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/screenshot.png)
 
 ---
 
