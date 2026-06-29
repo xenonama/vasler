@@ -21,8 +21,9 @@ export interface Config {
     source: string;
 }
 
+// پشتیبانی از type به صورت string یا array
 export interface Repository {
-    type: 'proxy_list' | 'mtproto' | 'v2ray' | 'gfwlist';
+    type: 'proxy_list' | 'mtproto' | 'v2ray' | 'gfwlist' | string | string[];
     files: string[];
 }
 
@@ -52,6 +53,9 @@ export interface AppSettings {
     timeout: number;
     language: 'en' | 'fa';
     theme: 'dark' | 'light';
+    trayEnabled?: boolean;
+    showDeadConfigs?: boolean;
+    xrayPath?: string;
 }
 
 export interface LogMessage {

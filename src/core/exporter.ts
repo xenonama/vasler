@@ -17,6 +17,7 @@ export class Exporter {
         const repoDir = path.join(this.outputDir, 'repositories');
         if (!fs.existsSync(repoDir)) fs.mkdirSync(repoDir, { recursive: true });
 
+        // ===== ذخیره پروکسی‌ها بر اساس منبع =====
         const bySource = new Map<string, Map<string, Proxy[]>>();
         for (const proxy of proxies) {
             if (!bySource.has(proxy.source)) bySource.set(proxy.source, new Map());
@@ -35,24 +36,45 @@ export class Exporter {
             }
         }
 
-        // all_proxies
+        // ===== all_proxies با محدودیت =====
         const allProxiesPath = path.join(this.outputDir, `all_proxies_${timestamp}.txt`);
         const allContent = this.generateAllProxies(proxies);
         fs.writeFileSync(allProxiesPath, allContent);
 
-        // all_mtproto
+        // ===== all_mtproto =====
         const mtprotoPath = path.join(this.outputDir, `all_mtproto_${timestamp}.txt`);
         const mtprotoContent = proxies.filter(p => p.protocol === 'mtproto' && p.rawLink).map(p => p.rawLink).join('\n');
         fs.writeFileSync(mtprotoPath, mtprotoContent);
 
-        // all_configs
+        // ===== all_configs با محدودیت 5000 عدد =====
         if (configs.length > 0) {
             const configsPath = path.join(this.outputDir, `all_configs_${timestamp}.txt`);
-            const configContent = configs.map(c => c.raw).join('\n');
+            
+            // ===== FIX: محدود کردن به 5000 کانفیگ =====
+            const MAX_CONFIGS = 5000;
+            let configsToExport = configs;
+            
+            if (configs.length > MAX_CONFIGS) {
+                console.log(`⚠️ Limiting configs from ${configs.length} to ${MAX_CONFIGS}`);
+                configsToExport = configs.slice(0, MAX_CONFIGS);
+            }
+            
+            const configContent = configsToExport.map(c => c.raw).join('\n');
             fs.writeFileSync(configsPath, configContent);
+            
+            // ===== ذخیره فایل با اطلاعات کامل (اختیاری) =====
+            const configInfoPath = path.join(this.outputDir, `config_info_${timestamp}.json`);
+            const configInfo = {
+                total: configs.length,
+                exported: configsToExport.length,
+                limited: configs.length > MAX_CONFIGS,
+                timestamp: timestamp,
+                protocols: this.getConfigStats(configs)
+            };
+            fs.writeFileSync(configInfoPath, JSON.stringify(configInfo, null, 2));
         }
 
-        // JSON summary
+        // ===== JSON summary =====
         const jsonPath = path.join(this.outputDir, `proxies_${timestamp}.json`);
         const portStatsObj: {[key: string]: number} = {};
         for (const [port, count] of stats.portStats) portStatsObj[port.toString()] = count;
@@ -63,6 +85,8 @@ export class Exporter {
             summary: {
                 totalProxies: stats.totalProxies,
                 totalConfigs: stats.totalConfigs,
+                configsExported: Math.min(stats.totalConfigs, 5000),
+                configsLimited: stats.totalConfigs > 5000,
                 sourcesProcessed: stats.successfulSources,
                 totalSources: stats.totalSources,
                 durationSeconds: (stats.endTime ? stats.endTime.getTime() - stats.startTime.getTime() : 0) / 1000
@@ -85,9 +109,23 @@ export class Exporter {
         for (const [protocol, list] of groups) {
             result += `\n[${protocol.toUpperCase()}]\n`;
             list.sort((a, b) => a.ip.localeCompare(b.ip) || a.port - b.port);
-            result += list.map(p => `${p.ip}:${p.port}`).join('\n');
+            // ===== محدود کردن تعداد پروکسی‌های هر پروتکل به 10000 =====
+            const maxPerProtocol = 10000;
+            const displayList = list.length > maxPerProtocol ? list.slice(0, maxPerProtocol) : list;
+            if (list.length > maxPerProtocol) {
+                result += `# ${list.length} proxies, showing first ${maxPerProtocol}\n`;
+            }
+            result += displayList.map(p => `${p.ip}:${p.port}`).join('\n');
             result += '\n';
         }
         return result;
+    }
+
+    private getConfigStats(configs: Config[]): Record<string, number> {
+        const stats: Record<string, number> = {};
+        for (const config of configs) {
+            stats[config.protocol] = (stats[config.protocol] || 0) + 1;
+        }
+        return stats;
     }
 }

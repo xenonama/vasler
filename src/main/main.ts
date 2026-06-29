@@ -11,12 +11,17 @@ let collector: Collector | null = null;
 let trayEnabled: boolean = true;
 let isQuitting: boolean = false;
 
-// ============================================================
-//  مسیر Xray از settings.json
-// ============================================================
+function getSettingsPath(): string {
+    return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function getRepositoriesPath(): string {
+    return path.join(app.getPath('userData'), 'repositories.json');
+}
+
 function getXrayPathFromSettings(): string | null {
     try {
-        const settingsPath = path.join(process.cwd(), 'settings.json');
+        const settingsPath = getSettingsPath();
         if (fs.existsSync(settingsPath)) {
             const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
             return settings.xrayPath || null;
@@ -27,30 +32,55 @@ function getXrayPathFromSettings(): string | null {
     }
 }
 
-// ============================================================
-//  تست Xray
-// ============================================================
-async function testXray(xrayPath: string): Promise<boolean> {
+function saveXrayPathToSettings(xrayPath: string): void {
+    try {
+        const settingsPath = getSettingsPath();
+        let settings: any = {};
+        if (fs.existsSync(settingsPath)) {
+            settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        }
+        settings.xrayPath = xrayPath;
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    } catch (error) {
+        console.error('Error saving Xray path:', error);
+    }
+}
+
+async function testXray(xrayPath: string): Promise<{ ok: boolean, output: string }> {
     return new Promise((resolve) => {
         try {
             const proc = spawn(xrayPath, ['-version']);
-            proc.on('close', (code) => resolve(code === 0));
-            proc.on('error', () => resolve(false));
-            setTimeout(() => { proc.kill(); resolve(false); }, 3000);
-        } catch {
-            resolve(false);
+            let output = '';
+            let error = '';
+            proc.stdout.on('data', (data) => { output += data.toString(); });
+            proc.stderr.on('data', (data) => { error += data.toString(); });
+            proc.on('close', (code) => {
+                resolve({
+                    ok: code === 0,
+                    output: output + error
+                });
+            });
+            proc.on('error', (err) => {
+                resolve({ ok: false, output: err.message });
+            });
+            setTimeout(() => {
+                proc.kill();
+                resolve({ ok: false, output: 'Timeout' });
+            }, 3000);
+        } catch (err: any) {
+            resolve({ ok: false, output: err.message });
         }
     });
 }
 
-// ============================================================
-//  تابع پینگ با Xray
-// ============================================================
-async function pingWithXray(rawConfig: string, xrayPath: string): Promise<number> {
+async function pingWithXray(rawConfig: string, xrayPath: string, timeoutMs: number = 3000): Promise<number> {
     return new Promise((resolve) => {
         try {
             const protocolMatch = rawConfig.match(/^(vmess|vless|trojan|shadowsocks):\/\//i);
-            if (!protocolMatch) { resolve(-1); return; }
+            if (!protocolMatch) {
+                resolve(-1);
+                return;
+            }
 
             const protocol = protocolMatch[1].toLowerCase();
             const encoded = rawConfig.substring(rawConfig.indexOf('://') + 3);
@@ -169,30 +199,45 @@ async function pingWithXray(rawConfig: string, xrayPath: string): Promise<number
             const configFile = path.join(tempDir, `ping_${Date.now()}.json`);
             fs.writeFileSync(configFile, JSON.stringify(configObj, null, 2));
 
-            const xray = spawn(xrayPath, ['-config', configFile, '-test'], { timeout: 10000 });
+            const xray = spawn(xrayPath, ['-config', configFile, '-test'], { timeout: timeoutMs + 1000 });
             let output = '', errorOutput = '';
             xray.stdout.on('data', (d) => { output += d.toString(); });
             xray.stderr.on('data', (d) => { errorOutput += d.toString(); });
 
             xray.on('close', (code) => {
                 try { fs.unlinkSync(configFile); } catch {}
-                if (code !== 0) { resolve(-1); return; }
+                if (code !== 0) {
+                    resolve(-1);
+                    return;
+                }
                 const combined = output + errorOutput;
                 const match = combined.match(/latency\s*[:=]\s*([\d.]+)/i) ||
                               combined.match(/([\d.]+)\s*ms/i) ||
                               combined.match(/tcp:\/\/.*?([\d.]+)ms/i);
-                if (match) { resolve(Math.round(parseFloat(match[1]))); }
-                else { resolve(50 + Math.floor(Math.random() * 150)); }
+                if (match) {
+                    resolve(Math.round(parseFloat(match[1])));
+                } else {
+                    resolve(50 + Math.floor(Math.random() * 150));
+                }
             });
-            xray.on('error', () => { try { fs.unlinkSync(configFile); } catch {} resolve(-1); });
-            setTimeout(() => { xray.kill(); try { fs.unlinkSync(configFile); } catch {} resolve(-1); }, 10000);
-        } catch { resolve(-1); }
+
+            xray.on('error', () => {
+                try { fs.unlinkSync(configFile); } catch {}
+                resolve(-1);
+            });
+
+            setTimeout(() => {
+                xray.kill();
+                try { fs.unlinkSync(configFile); } catch {}
+                resolve(-1);
+            }, timeoutMs + 2000);
+
+        } catch (error) {
+            resolve(-1);
+        }
     });
 }
 
-// ============================================================
-//  Create System Tray
-// ============================================================
 function createTray() {
     let icon: NativeImage;
     try {
@@ -315,12 +360,9 @@ function updateTrayMenu() {
     tray.setContextMenu(contextMenu);
 }
 
-// ============================================================
-//  Create Window
-// ============================================================
 function createWindow() {
     try {
-        const settingsPath = path.join(process.cwd(), 'settings.json');
+        const settingsPath = getSettingsPath();
         if (fs.existsSync(settingsPath)) {
             const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
             trayEnabled = settings.trayEnabled !== undefined ? settings.trayEnabled : true;
@@ -346,6 +388,7 @@ function createWindow() {
         if (trayEnabled) {
             createTray();
         }
+        initializeRepositories();
     });
 
     if (process.argv.includes('--dev')) mainWindow.webContents.openDevTools();
@@ -371,14 +414,87 @@ function createWindow() {
     setTimeout(async () => {
         const xrayPath = getXrayPathFromSettings();
         if (xrayPath && fs.existsSync(xrayPath)) {
-            const ok = await testXray(xrayPath);
+            const result = await testXray(xrayPath);
             mainWindow?.webContents.send('collector-log', {
-                message: ok ? '✅ Xray test passed' : '⚠️ Xray test failed. Check if Xray is working.',
-                level: ok ? 'success' : 'warning',
+                message: result.ok ? '✅ Xray test passed' : `⚠️ Xray test failed: ${result.output}`,
+                level: result.ok ? 'success' : 'warning',
+                timestamp: new Date()
+            });
+        } else {
+            mainWindow?.webContents.send('collector-log', {
+                message: '⚠️ Xray not installed. Please download or select path from Settings tab.',
+                level: 'warning',
                 timestamp: new Date()
             });
         }
     }, 2000);
+}
+
+// ===== اصلاح شده =====
+async function initializeRepositories() {
+    try {
+        collector = new Collector('./proxy_output', getRepositoriesPath());
+        setupCollectorEvents();
+        await collector.loadRepositories();
+        const repos = collector.getRepositories();
+        
+        const reposObj: Record<string, any> = {};
+        for (const [name, repo] of repos) {
+            reposObj[name] = repo;
+        }
+        mainWindow?.webContents.send('repositories-loaded', reposObj);
+        
+        await checkForNewRepositories(reposObj);
+        
+    } catch (error) {
+        console.error('Error initializing repositories:', error);
+    }
+}
+
+async function checkForNewRepositories(currentRepos: Record<string, any>) {
+    try {
+        const MASTER_REPO_URL = 'https://raw.githubusercontent.com/xenonama/vasler-repo-list/refs/heads/main/repositories.json';
+        const response = await fetch(MASTER_REPO_URL);
+        if (!response.ok) return;
+        
+        const data: any = await response.json();
+        
+        let repos: Record<string, any> = {};
+        if (data.repositories && typeof data.repositories === 'object') {
+            repos = data.repositories;
+        } else {
+            repos = data;
+        }
+        
+        const excludeKeys = ['version', 'lastUpdated', '_comment', 'meta', 'repositories'];
+        const newRepos: Record<string, any> = {};
+        let newCount = 0;
+        
+        for (const [name, repo] of Object.entries(repos)) {
+            if (excludeKeys.includes(name)) continue;
+            if (!currentRepos[name] && repo && typeof repo === 'object') {
+                const repoAny = repo as any;
+                const files = repoAny.files || [];
+                if (Array.isArray(files) && files.length > 0) {
+                    newRepos[name] = {
+                        type: repoAny.type || 'proxy_list',
+                        files: files
+                    };
+                    newCount++;
+                }
+            }
+        }
+        
+        if (newCount > 0) {
+            mainWindow?.webContents.send('new-repositories-available', {
+                count: newCount,
+                repositories: newRepos
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error checking for new repositories:', error);
+    }
 }
 
 function createMenu() {
@@ -396,7 +512,7 @@ function createMenu() {
                     tray = null;
                 }
                 try {
-                    const settingsPath = path.join(process.cwd(), 'settings.json');
+                    const settingsPath = getSettingsPath();
                     let settings: any = {};
                     if (fs.existsSync(settingsPath)) {
                         settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -428,11 +544,7 @@ function showAboutDialog() {
     });
 }
 
-// ============================================================
-//  IPC Handlers
-// ============================================================
 function setupIpcHandlers() {
-    // Window controls
     ipcMain.handle('minimize-window', () => {
         if (trayEnabled && tray) {
             mainWindow?.hide();
@@ -453,7 +565,6 @@ function setupIpcHandlers() {
         }
     });
 
-    // Tray control
     ipcMain.handle('toggle-tray', async (event: any, enabled: boolean) => {
         trayEnabled = enabled;
         if (trayEnabled) {
@@ -465,7 +576,7 @@ function setupIpcHandlers() {
             }
         }
         try {
-            const settingsPath = path.join(process.cwd(), 'settings.json');
+            const settingsPath = getSettingsPath();
             let settings: any = {};
             if (fs.existsSync(settingsPath)) {
                 settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -480,18 +591,23 @@ function setupIpcHandlers() {
         return trayEnabled;
     });
 
-    // ============================================================
-    //  UPDATE CHECK - FIX: از ریپازیتوری اصلی بخوان
-    // ============================================================
+    ipcMain.handle('get-xray-path', () => {
+        return getXrayPathFromSettings();
+    });
+
+    ipcMain.handle('set-xray-path', async (event: any, xrayPath: string) => {
+        saveXrayPathToSettings(xrayPath);
+        return true;
+    });
+
     ipcMain.handle('check-update', async (event: any, currentVersion: string) => {
         try {
-            // ===== تغییر: استفاده از ریپازیتوری اصلی به جای مادر =====
             const VERSION_URL = 'https://raw.githubusercontent.com/xenonama/vasler/main/version.json';
             const response = await fetch(VERSION_URL);
             if (!response.ok) {
                 return { hasUpdate: false, error: `HTTP ${response.status}` };
             }
-            const data = await response.json();
+            const data: any = await response.json();
             const latestVersion = data.version || '0.0.0';
             const hasUpdate = latestVersion !== currentVersion;
             return {
@@ -509,7 +625,6 @@ function setupIpcHandlers() {
         await shell.openExternal(url);
     });
 
-    // Directory
     ipcMain.handle('select-directory', async () => {
         const result = await dialog.showOpenDialog(mainWindow!, { properties: ['openDirectory'] });
         return result.filePaths[0] || '';
@@ -519,10 +634,9 @@ function setupIpcHandlers() {
         if (fs.existsSync(outputPath)) shell.openPath(outputPath);
     });
 
-    // Repositories
     ipcMain.handle('load-repositories', async () => {
         if (!collector) {
-            collector = new Collector('./proxy_output', './repositories.json');
+            collector = new Collector('./proxy_output', getRepositoriesPath());
             setupCollectorEvents();
         }
         await collector.loadRepositories();
@@ -546,7 +660,34 @@ function setupIpcHandlers() {
         return {};
     });
 
-    // Sync from GitHub
+    ipcMain.handle('save-repositories-status', async (event: any, status: Record<string, boolean>) => {
+        try {
+            const repoPath = getRepositoriesPath();
+            let data: any = {};
+            if (fs.existsSync(repoPath)) {
+                data = JSON.parse(fs.readFileSync(repoPath, 'utf-8'));
+            }
+            data.status = status;
+            fs.writeFileSync(repoPath, JSON.stringify(data, null, 2));
+            return true;
+        } catch (error) {
+            return false;
+        }
+    });
+
+    ipcMain.handle('get-repositories-status', async () => {
+        try {
+            const repoPath = getRepositoriesPath();
+            if (fs.existsSync(repoPath)) {
+                const data = JSON.parse(fs.readFileSync(repoPath, 'utf-8'));
+                return data.status || {};
+            }
+            return {};
+        } catch {
+            return {};
+        }
+    });
+
     ipcMain.handle('sync-repositories', async () => {
         try {
             const MASTER_REPO_URL = 'https://raw.githubusercontent.com/xenonama/vasler-repo-list/refs/heads/main/repositories.json';
@@ -554,11 +695,13 @@ function setupIpcHandlers() {
             if (!response.ok) {
                 return { success: false, count: 0, error: `HTTP ${response.status}` };
             }
-            const data = await response.json();
+            const data: any = await response.json();
 
-            let repos = data;
+            let repos: Record<string, any> = {};
             if (data.repositories && typeof data.repositories === 'object') {
                 repos = data.repositories;
+            } else {
+                repos = data;
             }
 
             const excludeKeys = ['version', 'lastUpdated', '_comment', 'meta', 'repositories'];
@@ -578,23 +721,37 @@ function setupIpcHandlers() {
             }
 
             let count = 0;
-            for (const [name, repo] of Object.entries(filteredRepos)) {
-                if (collector) {
-                    await collector.addRepository(name, repo as any);
-                    count++;
+            if (collector) {
+                for (const [name, repo] of Object.entries(filteredRepos)) {
+                    const existing = collector.getRepositories().get(name);
+                    if (!existing) {
+                        await collector.addRepository(name, repo as any);
+                        count++;
+                    }
                 }
             }
+
+            if (count > 0) {
+                const allRepos = collector?.getRepositories();
+                const reposObj: Record<string, any> = {};
+                if (allRepos) {
+                    for (const [name, repo] of allRepos) {
+                        reposObj[name] = repo;
+                    }
+                }
+                mainWindow?.webContents.send('repositories-loaded', reposObj);
+            }
+
             return { success: true, count };
         } catch (error: any) {
             return { success: false, count: 0, error: error.message };
         }
     });
 
-    // Collection
     ipcMain.handle('start-collection', async (event: any, settings: any) => {
         const outputDir = settings.outputDir || './proxy_output';
         if (!collector) {
-            collector = new Collector(outputDir, './repositories.json');
+            collector = new Collector(outputDir, getRepositoriesPath());
             setupCollectorEvents();
             await collector.loadRepositories();
         } else {
@@ -602,6 +759,14 @@ function setupIpcHandlers() {
                 collector.outputDir = outputDir;
             }
         }
+        
+        mainWindow?.webContents.send('collector-status', {
+            message: '🚀 Starting collection...',
+            status: 'collecting',
+            proxiesFound: 0,
+            configsFound: 0
+        });
+        
         await collector.start(settings);
         updateTrayMenu();
     });
@@ -610,7 +775,6 @@ function setupIpcHandlers() {
         updateTrayMenu();
     });
 
-    // Results
     ipcMain.handle('get-results', async () => {
         if (!collector) {
             return { totalProxies: 0, totalConfigs: 0, sources: '0/0' };
@@ -623,7 +787,7 @@ function setupIpcHandlers() {
             duration: stats.endTime ? ((stats.endTime.getTime() - stats.startTime.getTime()) / 1000).toFixed(2) : '0'
         };
     });
-    ipcMain.handle('get-proxies', async (event: any, type: string, limit: number = 50) => {
+    ipcMain.handle('get-proxies', async (event: any, type: string, limit: number = 20000) => {
         if (!collector) return [];
         const allProxies: any[] = [];
         let proxySet;
@@ -647,7 +811,7 @@ function setupIpcHandlers() {
         }
         return allProxies;
     });
-    ipcMain.handle('get-configs-by-type', async (event: any, protocol: string, limit: number = 50) => {
+    ipcMain.handle('get-configs-by-type', async (event: any, protocol: string, limit: number = 20000) => {
         if (!collector) return [];
         let configs = collector.configs;
         if (protocol !== 'all') {
@@ -656,7 +820,6 @@ function setupIpcHandlers() {
         return configs.slice(0, limit).map(c => c.raw);
     });
 
-    // Pinger
     ipcMain.handle('ping-all-configs', async (event: any, configs: string[]) => {
         const latencies: Record<string, number> = {};
         const xrayPath = getXrayPathFromSettings();
@@ -664,7 +827,7 @@ function setupIpcHandlers() {
 
         if (!useXray) {
             mainWindow?.webContents.send('collector-log', {
-                message: '⚠️ Xray not installed. Please download or select Xray path.',
+                message: '⚠️ Xray not installed. Please download or select Xray path from Settings tab.',
                 level: 'warning',
                 timestamp: new Date()
             });
@@ -672,10 +835,10 @@ function setupIpcHandlers() {
             return { latencies };
         }
 
-        const xrayOk = await testXray(xrayPath);
-        if (!xrayOk) {
+        const result = await testXray(xrayPath);
+        if (!result.ok) {
             mainWindow?.webContents.send('collector-log', {
-                message: '❌ Xray test failed. Please check Xray installation.',
+                message: `❌ Xray test failed: ${result.output}`,
                 level: 'error',
                 timestamp: new Date()
             });
@@ -683,7 +846,7 @@ function setupIpcHandlers() {
             return { latencies };
         }
 
-        const limited = configs.slice(0, 50);
+        const limited = configs.slice(0, 200);
         let index = 0;
         for (const raw of limited) {
             index++;
@@ -694,8 +857,10 @@ function setupIpcHandlers() {
                     timestamp: new Date()
                 });
             }
-            latencies[raw] = await pingWithXray(raw, xrayPath);
+            const latency = await pingWithXray(raw, xrayPath, 3000);
+            latencies[raw] = latency;
         }
+
         mainWindow?.webContents.send('collector-log', {
             message: `✅ Ping completed: ${limited.length} configs tested`,
             level: 'success',
@@ -708,12 +873,85 @@ function setupIpcHandlers() {
         const xrayPath = getXrayPathFromSettings();
         const useXray = xrayPath && fs.existsSync(xrayPath);
         if (useXray) {
-            return { latency: await pingWithXray(raw, xrayPath) };
+            const latency = await pingWithXray(raw, xrayPath, 3000);
+            return { latency };
         }
         return { latency: -1 };
     });
 
-    // Xray Download
+    ipcMain.handle('deep-scan-configs', async (event: any, configs: string[]) => {
+        const latencies: Record<string, number> = {};
+        const xrayPath = getXrayPathFromSettings();
+        const useXray = xrayPath && fs.existsSync(xrayPath);
+
+        if (!useXray) {
+            mainWindow?.webContents.send('collector-log', {
+                message: '⚠️ Xray not installed. Please download or select Xray path from Settings tab.',
+                level: 'warning',
+                timestamp: new Date()
+            });
+            for (const raw of configs) { latencies[raw] = -1; }
+            return { latencies };
+        }
+
+        const result = await testXray(xrayPath);
+        if (!result.ok) {
+            mainWindow?.webContents.send('collector-log', {
+                message: `❌ Xray test failed: ${result.output}`,
+                level: 'error',
+                timestamp: new Date()
+            });
+            for (const raw of configs) { latencies[raw] = -1; }
+            return { latencies };
+        }
+
+        const limited = configs.slice(0, 200);
+        let index = 0;
+        for (const raw of limited) {
+            index++;
+            if (index % 10 === 0) {
+                mainWindow?.webContents.send('collector-log', {
+                    message: `🔥 Deep scan: ${index}/${limited.length}...`,
+                    level: 'debug',
+                    timestamp: new Date()
+                });
+            }
+            let bestLatency = -1;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const latency = await pingWithXray(raw, xrayPath, 5000);
+                if (latency > 0 && (bestLatency === -1 || latency < bestLatency)) {
+                    bestLatency = latency;
+                }
+                if (bestLatency > 0 && bestLatency < 100) break;
+            }
+            latencies[raw] = bestLatency;
+        }
+
+        mainWindow?.webContents.send('collector-log', {
+            message: `🔥 Deep scan completed: ${limited.length} configs tested`,
+            level: 'success',
+            timestamp: new Date()
+        });
+        return { latencies };
+    });
+
+    ipcMain.handle('ping-single-config-deep', async (event: any, raw: string) => {
+        const xrayPath = getXrayPathFromSettings();
+        const useXray = xrayPath && fs.existsSync(xrayPath);
+        if (useXray) {
+            let bestLatency = -1;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const latency = await pingWithXray(raw, xrayPath, 5000);
+                if (latency > 0 && (bestLatency === -1 || latency < bestLatency)) {
+                    bestLatency = latency;
+                }
+                if (bestLatency > 0 && bestLatency < 100) break;
+            }
+            return { latency: bestLatency };
+        }
+        return { latency: -1 };
+    });
+
     ipcMain.handle('download-xray', async (event: any) => {
         const win = BrowserWindow.getFocusedWindow();
         if (!win) return { success: false, error: 'No window' };
@@ -733,7 +971,8 @@ function setupIpcHandlers() {
             } else {
                 return { success: false, error: 'Unsupported platform' };
             }
-            const xrayDir = path.join(app.getPath('userData'), 'xray');
+            const userDataPath = app.getPath('userData');
+            const xrayDir = path.join(userDataPath, 'xray');
             if (!fs.existsSync(xrayDir)) fs.mkdirSync(xrayDir, { recursive: true });
             const zipPath = path.join(xrayDir, 'xray.zip');
             win.webContents.send('xray-download-progress', { progress: 0, status: 'start' });
@@ -778,9 +1017,6 @@ function setupIpcHandlers() {
     });
 }
 
-// ============================================================
-//  Collector Events
-// ============================================================
 function setupCollectorEvents() {
     if (!collector) return;
     collector.on('log', (data) => mainWindow?.webContents.send('collector-log', data));
@@ -796,9 +1032,6 @@ function setupCollectorEvents() {
     collector.on('error', (error) => mainWindow?.webContents.send('collector-error', error));
 }
 
-// ============================================================
-//  App Lifecycle
-// ============================================================
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
