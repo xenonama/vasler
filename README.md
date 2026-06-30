@@ -1,39 +1,52 @@
 # 🚀 Vasler - Professional Proxy & Config Collector
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Electron](https://img.shields.io/badge/Electron-28-blue)](https://electronjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+**Vasler** is a powerful cross-platform desktop application built with **Electron** and **TypeScript** for collecting, validating, and exporting proxies and V2Ray configs from various GitHub repositories.
 
-**Vasler** is a powerful desktop application for collecting and managing proxies and V2Ray configs from GitHub repositories.
-
+![Vasler Banner](https://raw.githubusercontent.com/xenonama/vasler/main/assets/banner.png)
 
 ---
 
 ## ✨ Features
 
-- 🔍 **Collect Proxies & Configs** from multiple GitHub repositories
-- 📋 **Organized Results** with separate sections for VLess, VMess, Trojan, Shadowsocks, and more
-- 📡 **Pinger Tool** with Xray-core integration for testing config latencies
-- 📁 **Export** to TXT, CSV, and JSON formats
-- 📂 **Repository Management** with GitHub sync
-- 🌙 **Dark/Light Theme** support
-- 💾 **Auto-save** settings
-- 🖥️ **Cross-platform** (Windows, Linux, macOS)
+- 📥 **Collect Proxies** – HTTP, HTTPS, SOCKS4, SOCKS5, MTProto  
+- 🛸 **Collect V2Ray Configs** – VMess, VLess, Trojan, Shadowsocks  
+- 📂 **Repository Manager** – Add, remove, enable/disable repositories  
+- 🔄 **Sync from GitHub** – Automatically fetch latest repository lists  
+- ✅ **Verify Liveness** – Test proxy availability with TCP connect  
+- 🚀 **Speed Test** – Test top 100 proxies and show fastest 10  
+- 📡 **Config Pinger** – Ping V2Ray configs using Xray-core  
+- 📋 **Results Viewer** – View collected proxies and configs with "Load More"  
+- 🎨 **Dark & Light Themes** – Switch between dark and light mode  
+- 🖥️ **System Tray** – Quick access from system tray  
+- 📤 **Export Results** – Export to TXT, CSV, and JSON formats  
+- ⬆️ **Auto Update** – Check for new versions automatically  
 
 ---
 
-## 📦 Installation
+## 📸 Screenshots
 
-### From Source
+| Collector | Results | Pinger |
+|-----------|---------|--------|
+| ![Collector](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-collector.png) | ![Results](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-results.png) | ![Pinger](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-pinger.png) |
+
+*(Replace with actual screenshots in assets folder)*
+
+---
+
+## 🚀 Installation
+
+### **From Source**
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/vasler.git
+git clone https://github.com/xenonama/vasler.git
 cd vasler
 
 # Install dependencies
 npm install
 
-# Build and run
+# Build the project
 npm run build
+
+# Start the application
 npm start
