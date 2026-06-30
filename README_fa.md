@@ -1,4 +1,10 @@
-# 🚀 واسلر (Vasler) - جمع‌آوری‌کننده حرفه‌ای پروکسی و کانفیگ
+
+---
+
+## 📄 **فایل `README.fa.md` (فارسی - بدون بنر)**
+
+```markdown
+# 🚀 وصلر (vasler)- جمع‌آوری‌کننده حرفه‌ای پروکسی و کانفیگ
 
 **واسلر** یک اپلیکیشن دسکتاپ قدرتمند و چندسکویی است که با **Electron** و **TypeScript** ساخته شده و برای جمع‌آوری، اعتبارسنجی و خروجی‌گیری پروکسی‌ها و کانفیگ‌های V2Ray از مخزن‌های مختلف گیت‌هاب طراحی شده است.
 
@@ -25,9 +31,11 @@
 
 | جمع‌آوری‌کننده | نتایج | پینگر |
 |-----------|---------|--------|
-| ![Collector](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-collector.png) | ![Results](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-results.png) | ![Pinger](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-pinger.png) |
+| ![Collector](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-collector.jpg) | ![Results](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-results.jpg) | ![Pinger](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-pinger.jpg) |
 
-*(تصاویر واقعی را در پوشه assets قرار دهید)*
+| مخزن‌ها | تنظیمات |
+|--------------|----------|
+| ![Repositories](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-repositories.jpg) | ![Settings](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-settings.jpg) |
 
 ---
 
