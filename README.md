@@ -2,8 +2,6 @@
 
 **Vasler** is a powerful cross-platform desktop application built with **Electron** and **TypeScript** for collecting, validating, and exporting proxies and V2Ray configs from various GitHub repositories.
 
-![Vasler Banner](https://raw.githubusercontent.com/xenonama/vasler/main/assets/banner.png)
-
 ---
 
 ## ✨ Features
@@ -27,9 +25,11 @@
 
 | Collector | Results | Pinger |
 |-----------|---------|--------|
-| ![Collector](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-collector.png) | ![Results](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-results.png) | ![Pinger](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-pinger.png) |
+| ![Collector](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-collector.jpg) | ![Results](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-results.jpg) | ![Pinger](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-pinger.jpg) |
 
-*(Replace with actual screenshots in assets folder)*
+| Repositories | Settings |
+|--------------|----------|
+| ![Repositories](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-repositories.jpg) | ![Settings](https://raw.githubusercontent.com/xenonama/vasler/main/assets/screenshot-settings.jpg) |
 
 ---
 
